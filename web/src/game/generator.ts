@@ -95,33 +95,41 @@ function shuffleBands(grid: Grid): Grid {
 }
 
 /**
- * Transposes the grid (swap rows and columns). Lets us reuse the row
- * shufflers to permute columns and stacks.
+ * Shuffles columns within each stack (cols 0-2, 3-5, 6-8) independently.
+ * Columns in a stack are interchangeable: each contributes the same
+ * 3 cells to each box, so reordering them keeps every box, row, and
+ * column valid.
  */
-function transpose(grid: Grid): Grid {
-  const result: Grid = []
-  for (let r = 0; r < SIZE; r++) {
-    const row: CellValue[] = []
-    for (let c = 0; c < SIZE; c++) row.push(grid[c][r])
-    result.push(row)
+function shuffleColumnsWithinStacks(grid: Grid): Grid {
+  const result: Grid = grid.map(() => [] as CellValue[])
+  for (let stack = 0; stack < BOX; stack++) {
+    const order = shuffle([0, 1, 2])
+    for (let r = 0; r < SIZE; r++) {
+      const stackCols = [
+        grid[r][stack * BOX],
+        grid[r][stack * BOX + 1],
+        grid[r][stack * BOX + 2],
+      ]
+      const reordered = permuteTriple(stackCols, order)
+      result[r].push(...reordered)
+    }
   }
   return result
 }
 
 /**
- * Shuffles columns within each stack (cols 0-2, 3-5, 6-8) by transposing,
- * applying the row-within-band shuffle, and transposing back.
- */
-function shuffleColumnsWithinStacks(grid: Grid): Grid {
-  return transpose(shuffleRowsWithinBands(transpose(grid)))
-}
-
-/**
- * Shuffles the 3 stacks themselves (each stack is 3 consecutive columns)
- * by reusing shuffleBands on the transposed grid.
+ * Shuffles the 3 stacks themselves (each stack is 3 consecutive columns).
+ * Moving a whole stack preserves the internal box structure.
  */
 function shuffleStacks(grid: Grid): Grid {
-  return transpose(shuffleBands(transpose(grid)))
+  const order = shuffle([0, 1, 2])
+  return grid.map(row => {
+    const stacks: CellValue[][] = []
+    for (let stack = 0; stack < BOX; stack++) {
+      stacks.push([row[stack * BOX], row[stack * BOX + 1], row[stack * BOX + 2]])
+    }
+    return permuteTriple(stacks, order).flat()
+  })
 }
 
 

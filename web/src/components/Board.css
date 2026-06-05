@@ -1,0 +1,28 @@
+.board {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  background: var(--bg);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+/* Thicker borders between 3x3 boxes */
+.board > .cell:nth-child(3n) {
+  border-right: 1.5px solid var(--border-strong);
+}
+
+.board > .cell:nth-child(9n) {
+  border-right: none;
+}
+
+/* Cells in rows 3 and 6 (1-indexed) get a thick bottom border.
+   These are cells 19-27 and 46-54 in nth-child terms. */
+.board > .cell:nth-child(n+19):nth-child(-n+27),
+.board > .cell:nth-child(n+46):nth-child(-n+54) {
+  border-bottom: 1.5px solid var(--border-strong);
+}
+
+.board > .cell:nth-child(n+73) {
+  border-bottom: none;
+}

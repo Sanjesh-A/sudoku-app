@@ -1,10 +1,14 @@
 import type { GameState, Difficulty, CellValue } from '../game/types'
 import { generatePuzzle } from '../game/generator'
 
+export type View = 'menu' | 'game' | 'history' | 'win'
+
 export interface UiState {
-  game: GameState
+  view: View
+  game: GameState | null
   selected: { row: number; col: number } | null
   notesMode: boolean
+  lastWin: { difficulty: Difficulty; elapsedMs: number } | null
 }
 
 export type Action =
@@ -14,32 +18,90 @@ export type Action =
   | { type: 'toggleNotes' }
   | { type: 'moveSelection'; dRow: number; dCol: number }
   | { type: 'startNewGame'; difficulty: Difficulty }
-  | { type: 'tickTimer'; elapsedMs: number }
+  | { type: 'resumeGame'; game: GameState }
+  | { type: 'completeGame'; finalElapsedMs: number }
+  | { type: 'goToMenu'; finalElapsedMs?: number }
+  | { type: 'goToHistory' }
 
-export function initialState(difficulty: Difficulty = 'easy'): UiState {
-  const { puzzle } = generatePuzzle(difficulty)
+export function initialState(): UiState {
   return {
-    game: {
-      difficulty,
-      puzzle,
-      entries: Array.from({ length: 9 }, () => Array(9).fill(0)),
-      notes: Array.from({ length: 9 }, () =>
-        Array.from({ length: 9 }, () => Array(9).fill(false)),
-      ),
-      elapsedMs: 0,
-      startedAt: Date.now(),
-    },
+    view: 'menu',
+    game: null,
     selected: null,
     notesMode: false,
+    lastWin: null,
+  }
+}
+
+function newGameState(difficulty: Difficulty): GameState {
+  const { puzzle } = generatePuzzle(difficulty)
+  return {
+    difficulty,
+    puzzle,
+    entries: Array.from({ length: 9 }, () => Array(9).fill(0)),
+    notes: Array.from({ length: 9 }, () =>
+      Array.from({ length: 9 }, () => Array(9).fill(false)),
+    ),
+    elapsedMs: 0,
+    startedAt: Date.now(),
   }
 }
 
 export function gameReducer(state: UiState, action: Action): UiState {
   switch (action.type) {
+    case 'startNewGame':
+      return {
+        view: 'game',
+        game: newGameState(action.difficulty),
+        selected: null,
+        notesMode: false,
+        lastWin: null,
+      }
+
+    case 'resumeGame':
+      return {
+        view: 'game',
+        game: action.game,
+        selected: null,
+        notesMode: false,
+        lastWin: null,
+      }
+
+    case 'goToHistory':
+      return { ...state, view: 'history' }
+
+    case 'completeGame': {
+      if (state.game === null) return state
+      return {
+        ...state,
+        view: 'win',
+        lastWin: {
+          difficulty: state.game.difficulty,
+          elapsedMs: action.finalElapsedMs,
+        },
+        game: null,
+        selected: null,
+        notesMode: false,
+      }
+    }
+
+    case 'goToMenu':
+      if (state.game !== null && action.finalElapsedMs !== undefined) {
+        return {
+          ...state,
+          view: 'menu',
+          game: { ...state.game, elapsedMs: action.finalElapsedMs },
+          selected: null,
+        }
+      }
+      return { ...state, view: 'menu', selected: null }
+
     case 'selectCell':
+      if (state.game === null) return state
       return { ...state, selected: { row: action.row, col: action.col } }
 
     case 'moveSelection': {
+      if (state.game === null) return state
       if (state.selected === null) {
         return { ...state, selected: { row: 0, col: 0 } }
       }
@@ -49,9 +111,8 @@ export function gameReducer(state: UiState, action: Action): UiState {
     }
 
     case 'inputNumber': {
-      if (state.selected === null) return state
+      if (state.game === null || state.selected === null) return state
       const { row, col } = state.selected
-      // Can't modify a given cell
       if (state.game.puzzle[row][col] !== 0) return state
 
       if (state.notesMode) {
@@ -61,9 +122,7 @@ export function gameReducer(state: UiState, action: Action): UiState {
       }
 
       const entries = cloneGrid(state.game.entries)
-      // Toggle off if same value, otherwise set
       entries[row][col] = entries[row][col] === action.value ? 0 : action.value
-      // Setting a value clears notes in that cell
       const notes = cloneNotes(state.game.notes)
       if (entries[row][col] !== 0) {
         notes[row][col] = Array(9).fill(false)
@@ -72,7 +131,7 @@ export function gameReducer(state: UiState, action: Action): UiState {
     }
 
     case 'eraseCell': {
-      if (state.selected === null) return state
+      if (state.game === null || state.selected === null) return state
       const { row, col } = state.selected
       if (state.game.puzzle[row][col] !== 0) return state
       const entries = cloneGrid(state.game.entries)
@@ -85,11 +144,6 @@ export function gameReducer(state: UiState, action: Action): UiState {
     case 'toggleNotes':
       return { ...state, notesMode: !state.notesMode }
 
-    case 'startNewGame':
-      return initialState(action.difficulty)
-
-    case 'tickTimer':
-      return { ...state, game: { ...state.game, elapsedMs: action.elapsedMs } }
   }
 }
 

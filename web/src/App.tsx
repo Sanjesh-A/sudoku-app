@@ -1,37 +1,112 @@
-import { useReducer } from 'react'
+import { useReducer, useRef } from 'react'
 import { Board } from './components/Board'
 import { NumberPad } from './components/NumberPad'
 import { Controls } from './components/Controls'
+import { Timer, type TimerHandle } from './components/Timer'
+import { Menu } from './components/Menu'
+import { WinScreen } from './components/WinScreen'
 import { gameReducer, initialState } from './state/gameReducer'
 import { useKeyboard } from './hooks/useKeyboard'
+import { useWinDetection } from './hooks/useWinDetection'
+import { usePersistence } from './hooks/usePersistence'
+import { loadCurrentGame, addHistoryEntry } from './game/storage'
 
 function App() {
-  const [state, dispatch] = useReducer(gameReducer, undefined, () => initialState('easy'))
+  const [state, dispatch] = useReducer(gameReducer, undefined, initialState)
+  const timerRef = useRef<TimerHandle | null>(null)
 
-  useKeyboard(dispatch)
+  useKeyboard(state.view === 'game' ? dispatch : noop)
+
+  usePersistence(state.game)
+
+  useWinDetection(state.game, () => {
+    if (state.game === null) return
+    const finalElapsedMs = timerRef.current?.getElapsedMs() ?? state.game.elapsedMs
+    addHistoryEntry({
+      difficulty: state.game.difficulty,
+      elapsedMs: finalElapsedMs,
+      completedAt: Date.now(),
+    })
+    dispatch({ type: 'completeGame', finalElapsedMs })
+  })
+
+  const goToMenu = () => {
+    const finalElapsedMs = timerRef.current?.getElapsedMs()
+    dispatch({ type: 'goToMenu', finalElapsedMs })
+  }
 
   return (
     <div className="app">
-      <h1>Sudoku</h1>
-      <Board
-        puzzle={state.game.puzzle}
-        entries={state.game.entries}
-        notes={state.game.notes}
-        selected={state.selected}
-        onSelectCell={(row, col) => dispatch({ type: 'selectCell', row, col })}
-      />
-      <NumberPad
-        puzzle={state.game.puzzle}
-        entries={state.game.entries}
-        onInput={value => dispatch({ type: 'inputNumber', value })}
-      />
-      <Controls
-        notesMode={state.notesMode}
-        onToggleNotes={() => dispatch({ type: 'toggleNotes' })}
-        onErase={() => dispatch({ type: 'eraseCell' })}
-      />
+      {state.view === 'menu' && (
+        <>
+          <h1>Sudoku</h1>
+          <Menu
+            savedGame={loadCurrentGame()}
+            onResume={() => {
+              const saved = loadCurrentGame()
+              if (saved !== null) {
+                dispatch({ type: 'resumeGame', game: saved })
+              }
+            }}
+            onNewGame={(difficulty) => dispatch({ type: 'startNewGame', difficulty })}
+            onHistory={() => dispatch({ type: 'goToHistory' })}
+          />
+        </>
+      )}
+
+      {state.view === 'game' && state.game !== null && (
+        <>
+          <div className="game-header">
+            <button type="button" className="back-btn" onClick={goToMenu}>
+              ← Menu
+            </button>
+            <span className="game-difficulty">{state.game.difficulty}</span>
+            <Timer ref={timerRef} baseMs={state.game.elapsedMs} running={true} />
+          </div>
+          <Board
+            puzzle={state.game.puzzle}
+            entries={state.game.entries}
+            notes={state.game.notes}
+            selected={state.selected}
+            onSelectCell={(row, col) => dispatch({ type: 'selectCell', row, col })}
+          />
+          <NumberPad
+            puzzle={state.game.puzzle}
+            entries={state.game.entries}
+            onInput={(value) => dispatch({ type: 'inputNumber', value })}
+          />
+          <Controls
+            notesMode={state.notesMode}
+            onToggleNotes={() => dispatch({ type: 'toggleNotes' })}
+            onErase={() => dispatch({ type: 'eraseCell' })}
+          />
+        </>
+      )}
+
+      {state.view === 'win' && state.lastWin !== null && (
+        <WinScreen
+          difficulty={state.lastWin.difficulty}
+          elapsedMs={state.lastWin.elapsedMs}
+          onMenu={() => dispatch({ type: 'goToMenu' })}
+          onPlayAgain={() =>
+            dispatch({ type: 'startNewGame', difficulty: state.lastWin!.difficulty })
+          }
+        />
+      )}
+
+      {state.view === 'history' && (
+        <>
+          <h1>History</h1>
+          <p>Coming next session.</p>
+          <button type="button" onClick={() => dispatch({ type: 'goToMenu' })}>
+            ← Menu
+          </button>
+        </>
+      )}
     </div>
   )
 }
+
+function noop() {}
 
 export default App

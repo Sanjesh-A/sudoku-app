@@ -57,3 +57,31 @@ button {
   margin: 0 auto;
   padding: 2rem 1rem;
 }
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+
+.game-difficulty {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+  font-family: inherit;
+}
+
+.back-btn:hover {
+  color: var(--text);
+}

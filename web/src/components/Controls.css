@@ -1,0 +1,31 @@
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.control {
+  padding: 10px;
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.control:hover {
+  background: var(--bg-secondary);
+}
+
+.control.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.control:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

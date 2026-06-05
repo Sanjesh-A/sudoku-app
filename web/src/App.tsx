@@ -1,35 +1,34 @@
-import { useState } from 'react'
+import { useReducer } from 'react'
 import { Board } from './components/Board'
-import { generatePuzzle } from './game/generator'
-import type { GameState } from './game/types'
-
-function createInitialGame(): GameState {
-  const { puzzle, difficulty } = generatePuzzle('easy')
-  return {
-    difficulty,
-    puzzle,
-    entries: Array.from({ length: 9 }, () => Array(9).fill(0)),
-    notes: Array.from({ length: 9 }, () =>
-      Array.from({ length: 9 }, () => Array(9).fill(false)),
-    ),
-    elapsedMs: 0,
-    startedAt: Date.now(),
-  }
-}
+import { NumberPad } from './components/NumberPad'
+import { Controls } from './components/Controls'
+import { gameReducer, initialState } from './state/gameReducer'
+import { useKeyboard } from './hooks/useKeyboard'
 
 function App() {
-  const [game] = useState<GameState>(createInitialGame)
-  const [selected, setSelected] = useState<{ row: number; col: number } | null>(null)
+  const [state, dispatch] = useReducer(gameReducer, undefined, () => initialState('easy'))
+
+  useKeyboard(dispatch)
 
   return (
     <div className="app">
       <h1>Sudoku</h1>
       <Board
-        puzzle={game.puzzle}
-        entries={game.entries}
-        notes={game.notes}
-        selected={selected}
-        onSelectCell={(row, col) => setSelected({ row, col })}
+        puzzle={state.game.puzzle}
+        entries={state.game.entries}
+        notes={state.game.notes}
+        selected={state.selected}
+        onSelectCell={(row, col) => dispatch({ type: 'selectCell', row, col })}
+      />
+      <NumberPad
+        puzzle={state.game.puzzle}
+        entries={state.game.entries}
+        onInput={value => dispatch({ type: 'inputNumber', value })}
+      />
+      <Controls
+        notesMode={state.notesMode}
+        onToggleNotes={() => dispatch({ type: 'toggleNotes' })}
+        onErase={() => dispatch({ type: 'eraseCell' })}
       />
     </div>
   )

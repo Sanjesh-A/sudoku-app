@@ -10,6 +10,7 @@ import { useKeyboard } from './hooks/useKeyboard'
 import { useWinDetection } from './hooks/useWinDetection'
 import { usePersistence } from './hooks/usePersistence'
 import { loadCurrentGame, addHistoryEntry } from './game/storage'
+import { History } from './components/History'
 
 function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState)
@@ -95,13 +96,7 @@ function App() {
       )}
 
       {state.view === 'history' && (
-        <>
-          <h1>History</h1>
-          <p>Coming next session.</p>
-          <button type="button" onClick={() => dispatch({ type: 'goToMenu' })}>
-            ← Menu
-          </button>
-        </>
+        <History onBack={() => dispatch({ type: 'goToMenu' })} />
       )}
     </div>
   )

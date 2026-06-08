@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sudoku-postgres
+    environment:
+      POSTGRES_DB: sudoku
+      POSTGRES_USER: sudoku
+      POSTGRES_PASSWORD: sudoku_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - sudoku-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  sudoku-postgres-data:

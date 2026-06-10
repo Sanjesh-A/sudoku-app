@@ -85,3 +85,14 @@ button {
 .back-btn:hover {
   color: var(--text);
 }
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.app-header h1 {
+  margin: 0;
+}

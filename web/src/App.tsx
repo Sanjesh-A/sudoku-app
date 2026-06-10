@@ -11,8 +11,25 @@ import { useWinDetection } from './hooks/useWinDetection'
 import { usePersistence } from './hooks/usePersistence'
 import { loadCurrentGame, addHistoryEntry } from './game/storage'
 import { History } from './components/History'
+import { useAuth0 } from '@auth0/auth0-react'
+import { LoginScreen } from './components/LoginScreen'
+import { UserMenu } from './components/UserMenu'
 
 function App() {
+  const { isAuthenticated, isLoading } = useAuth0()
+
+  if (isLoading) {
+    return <div className="app"><p>Loading...</p></div>
+  }
+
+  if (!isAuthenticated) {
+    return <LoginScreen />
+  }
+
+  return <AuthenticatedApp />
+}
+
+function AuthenticatedApp() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState)
   const timerRef = useRef<TimerHandle | null>(null)
 
@@ -40,7 +57,10 @@ function App() {
     <div className="app">
       {state.view === 'menu' && (
         <>
-          <h1>Sudoku</h1>
+          <div className="app-header">
+            <h1>Sudoku</h1>
+            <UserMenu />
+          </div>
           <Menu
             savedGame={loadCurrentGame()}
             onResume={() => {

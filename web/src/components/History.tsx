@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { loadHistory } from '../game/storage'
+import { useEffect, useState, useMemo } from 'react'
+import { useStorage } from '../game/storage'
 import type { HistoryEntry, Difficulty } from '../game/types'
 import './History.css'
 
@@ -8,8 +8,37 @@ interface HistoryProps {
 }
 
 export function History({ onBack }: HistoryProps) {
-  const history = useMemo(() => loadHistory(), [])
+  const storage = useStorage()
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    storage
+      .loadHistory()
+      .then(setHistory)
+      .catch((e) => setError(e.message))
+      .finally(() => setIsLoading(false))
+  }, [storage])
+
   const bestTimes = useMemo(() => computeBestTimes(history), [history])
+
+  if (isLoading) {
+    return (
+      <div className="history">
+        <p>Loading...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="history">
+        <p>Error: {error}</p>
+        <button type="button" onClick={onBack}>← Menu</button>
+      </div>
+    )
+  }
 
   return (
     <div className="history">
@@ -22,9 +51,9 @@ export function History({ onBack }: HistoryProps) {
       </div>
 
       <div className="best-row">
-        {(['easy', 'medium', 'hard'] as Difficulty[]).map((d) => (
+        {(['EASY', 'MEDIUM', 'HARD'] as Difficulty[]).map((d) => (
           <div key={d} className="best">
-            <div className="best-label">Best {d}</div>
+            <div className="best-label">Best {titleCase(d)}</div>
             <div className="best-time">
               {bestTimes[d] !== null ? formatTime(bestTimes[d]!) : '—'}
             </div>
@@ -43,7 +72,7 @@ export function History({ onBack }: HistoryProps) {
           {history.map((entry, i) => (
             <li key={i} className="entry">
               <div>
-                <div className="entry-diff">{entry.difficulty}</div>
+                <div className="entry-diff">{titleCase(entry.difficulty)}</div>
                 <div className="entry-date">{formatDate(entry.completedAt)}</div>
               </div>
               <div className="entry-time">{formatTime(entry.elapsedMs)}</div>
@@ -59,9 +88,9 @@ function computeBestTimes(
   history: HistoryEntry[],
 ): Record<Difficulty, number | null> {
   const best: Record<Difficulty, number | null> = {
-    easy: null,
-    medium: null,
-    hard: null,
+    EASY: null,
+    MEDIUM: null,
+    HARD: null,
   }
   for (const entry of history) {
     const current = best[entry.difficulty]
@@ -80,6 +109,10 @@ function formatTime(ms: number): string {
   const mm = String(minutes % 60).padStart(2, '0')
   const ss = String(seconds).padStart(2, '0')
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
+}
+
+function titleCase(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 }
 
 function formatDate(timestamp: number): string {

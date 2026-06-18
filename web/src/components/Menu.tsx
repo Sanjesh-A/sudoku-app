@@ -15,19 +15,19 @@ export function Menu({ savedGame, onResume, onNewGame, onHistory }: MenuProps) {
         <button type="button" className="menu-item continue" onClick={onResume}>
           <span className="menu-label">Continue game</span>
           <span className="menu-desc">
-            {savedGame.difficulty} · in progress
+            {titleCase(savedGame.difficulty)} · in progress
           </span>
         </button>
       )}
-      <button type="button" className="menu-item" onClick={() => onNewGame('easy')}>
+      <button type="button" className="menu-item" onClick={() => onNewGame('EASY')}>
         <span className="menu-label">Easy</span>
         <span className="menu-desc">41 clues</span>
       </button>
-      <button type="button" className="menu-item" onClick={() => onNewGame('medium')}>
+      <button type="button" className="menu-item" onClick={() => onNewGame('MEDIUM')}>
         <span className="menu-label">Medium</span>
         <span className="menu-desc">33 clues</span>
       </button>
-      <button type="button" className="menu-item" onClick={() => onNewGame('hard')}>
+      <button type="button" className="menu-item" onClick={() => onNewGame('HARD')}>
         <span className="menu-label">Hard</span>
         <span className="menu-desc">27 clues</span>
       </button>
@@ -37,4 +37,8 @@ export function Menu({ savedGame, onResume, onNewGame, onHistory }: MenuProps) {
       </button>
     </div>
   )
+}
+
+function titleCase(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 }

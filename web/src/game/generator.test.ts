@@ -56,9 +56,9 @@ describe('generateSolution', () => {
 
 describe('generatePuzzle', () => {
   const cases: Array<{ difficulty: Difficulty; expectedClues: number }> = [
-    { difficulty: 'easy', expectedClues: 41 },
-    { difficulty: 'medium', expectedClues: 33 },
-    { difficulty: 'hard', expectedClues: 27 },
+    { difficulty: 'EASY', expectedClues: 41 },
+    { difficulty: 'MEDIUM', expectedClues: 33 },
+    { difficulty: 'HARD', expectedClues: 27 },
   ]
 
   cases.forEach(({ difficulty, expectedClues }) => {

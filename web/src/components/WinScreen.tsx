@@ -14,7 +14,7 @@ export function WinScreen({ difficulty, elapsedMs, onMenu, onPlayAgain }: WinScr
       <div className="win-card">
         <h2>Puzzle complete</h2>
         <p>
-          {capitalize(difficulty)} · {formatTime(elapsedMs)}
+          {titleCase(difficulty)} · {formatTime(elapsedMs)}
         </p>
       </div>
       <div className="win-actions">
@@ -22,7 +22,7 @@ export function WinScreen({ difficulty, elapsedMs, onMenu, onPlayAgain }: WinScr
           Back to menu
         </button>
         <button type="button" className="win-action" onClick={onPlayAgain}>
-          New {difficulty} game
+          New {titleCase(difficulty)} game
         </button>
       </div>
     </div>
@@ -39,6 +39,6 @@ function formatTime(ms: number): string {
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1)
+function titleCase(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 }

@@ -1,76 +1,119 @@
-import type { GameState, HistoryEntry } from './types'
-
-const KEY_CURRENT_GAME = 'sudoku:currentGame'
-const KEY_HISTORY = 'sudoku:history'
-const MAX_HISTORY_ENTRIES = 100
+import { useCallback, useMemo } from 'react'
+import { useApiClient, ApiError } from '../api/client'
+import type {
+  GameResponseDto,
+  HistoryEntryDto,
+  StartGameRequestDto,
+  SaveGameRequestDto,
+  CompleteGameRequestDto,
+} from '../api/types'
+import type { GameState, HistoryEntry, Difficulty, Grid } from './types'
 
 /**
- * Saves the current in-progress game. Overwrites any existing saved game.
- * Silently fails if localStorage is unavailable (e.g., private browsing
- * mode in some browsers).
+ * Hook providing storage operations backed by the API.
+ * Each method returns a Promise; callers must await.
  */
-export function saveCurrentGame(state: GameState): void {
-  try {
-    localStorage.setItem(KEY_CURRENT_GAME, JSON.stringify(state))
-  } catch {
-    // localStorage may throw QuotaExceededError or be unavailable.
-    // Treat as a no-op; the caller's UI state is unaffected.
+export function useStorage() {
+  const api = useApiClient()
+
+  const loadCurrentGame = useCallback(async (): Promise<GameState | null> => {
+    try {
+      const dto = await api<GameResponseDto>('/api/games/active')
+      return dtoToGameState(dto)
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) {
+        return null
+      }
+      throw e
+    }
+  }, [api])
+
+  const startGame = useCallback(
+    async (difficulty: Difficulty): Promise<GameState> => {
+      const dto = await api<GameResponseDto>('/api/games', {
+        method: 'POST',
+        body: { difficulty } satisfies StartGameRequestDto,
+      })
+      return dtoToGameState(dto)
+    },
+    [api],
+  )
+
+  const saveCurrentGame = useCallback(
+    async (state: GameState): Promise<void> => {
+      await api<GameResponseDto>('/api/games/active', {
+        method: 'PATCH',
+        body: {
+          entries: state.entries,
+          notes: state.notes,
+          elapsedMs: state.elapsedMs,
+        } satisfies SaveGameRequestDto,
+      })
+    },
+    [api],
+  )
+
+  const clearCurrentGame = useCallback(async (): Promise<void> => {
+    try {
+      await api('/api/games/active', { method: 'DELETE' })
+    } catch (e) {
+      // 404 means already cleared; not an error
+      if (e instanceof ApiError && e.status === 404) return
+      throw e
+    }
+  }, [api])
+
+  const completeGame = useCallback(
+    async (entries: number[][], elapsedMs: number): Promise<HistoryEntry> => {
+      const dto = await api<HistoryEntryDto>('/api/games/active/complete', {
+        method: 'POST',
+        body: { entries, elapsedMs } satisfies CompleteGameRequestDto,
+      })
+      return dtoToHistoryEntry(dto)
+    },
+    [api],
+  )
+
+  const loadHistory = useCallback(async (): Promise<HistoryEntry[]> => {
+    const dtos = await api<HistoryEntryDto[]>('/api/history')
+    return dtos.map(dtoToHistoryEntry)
+  }, [api])
+
+  return useMemo(
+    () => ({
+      loadCurrentGame,
+      startGame,
+      saveCurrentGame,
+      clearCurrentGame,
+      completeGame,
+      loadHistory,
+    }),
+    [
+      loadCurrentGame,
+      startGame,
+      saveCurrentGame,
+      clearCurrentGame,
+      completeGame,
+      loadHistory,
+    ],
+  )
+}
+
+function dtoToGameState(dto: GameResponseDto): GameState {
+  return {
+    difficulty: dto.difficulty,
+    puzzle: dto.puzzle as Grid,
+    entries: dto.entries as Grid,
+    notes: dto.notes,
+    elapsedMs: dto.elapsedMs,
+    startedAt: new Date(dto.startedAt).getTime(),
   }
 }
 
-/**
- * Loads the saved in-progress game, or null if there isn't one or
- * the saved data is unreadable.
- */
-export function loadCurrentGame(): GameState | null {
-  try {
-    const raw = localStorage.getItem(KEY_CURRENT_GAME)
-    if (raw === null) return null
-    return JSON.parse(raw) as GameState
-  } catch {
-    return null
-  }
-}
-
-/**
- * Clears the saved in-progress game. Typically called when a game
- * is completed or abandoned.
- */
-export function clearCurrentGame(): void {
-  try {
-    localStorage.removeItem(KEY_CURRENT_GAME)
-  } catch {
-    // No-op
-  }
-}
-
-/**
- * Returns all history entries, newest first.
- * Returns an empty array if there's no history or the saved data
- * is unreadable.
- */
-export function loadHistory(): HistoryEntry[] {
-  try {
-    const raw = localStorage.getItem(KEY_HISTORY)
-    if (raw === null) return []
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed as HistoryEntry[]
-  } catch {
-    return []
-  }
-}
-
-/**
- * Appends an entry to history (newest first) and persists.
- * Caps history at MAX_HISTORY_ENTRIES to avoid unbounded growth.
- */
-export function addHistoryEntry(entry: HistoryEntry): void {
-  const existing = loadHistory()
-  const updated = [entry, ...existing].slice(0, MAX_HISTORY_ENTRIES)
-  try {
-    localStorage.setItem(KEY_HISTORY, JSON.stringify(updated))
-  } catch {
-    // No-op
+function dtoToHistoryEntry(dto: HistoryEntryDto): HistoryEntry {
+  return {
+    difficulty: dto.difficulty,
+    elapsedMs: dto.elapsedMs,
+    completedAt: new Date(dto.completedAt).getTime(),
   }
 }

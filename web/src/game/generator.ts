@@ -157,9 +157,9 @@ export function generateSolution(): Grid {
 }
 
 const CELLS_TO_REMOVE: Record<Difficulty, number> = {
-  easy: 40,
-  medium: 48,
-  hard: 54,
+  EASY: 40,
+  MEDIUM: 48,
+  HARD: 54,
 }
 
 /**

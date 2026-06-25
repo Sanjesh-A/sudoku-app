@@ -27,7 +27,15 @@ public class CurrentUserService {
 
   private UserEntity createUserFromJwt(Jwt jwt) {
     String auth0Id = jwt.getSubject();
-    String displayName = (String) jwt.getClaims().getOrDefault("name", auth0Id);
+    String displayName = extractDisplayName(jwt, auth0Id);
     return userRepository.save(new UserEntity(auth0Id, displayName));
+  }
+
+  private String extractDisplayName(Jwt jwt, String fallback) {
+    String name = jwt.getClaimAsString("name");
+    if (name != null && !name.isBlank()) return name;
+    String namespaced = jwt.getClaimAsString("https://api.sudoku-app.com/name");
+    if (namespaced != null && !namespaced.isBlank()) return namespaced;
+    return fallback;
   }
 }

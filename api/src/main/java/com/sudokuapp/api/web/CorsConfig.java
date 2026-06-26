@@ -18,7 +18,8 @@ public class CorsConfig {
             "http://localhost:5173",
             "https://sudoku-app.sanjesh-ananda.workers.dev",
             "https://sanyogsar.com",
-            "https://www.sanyogsar.com"
+            "https://www.sanyogsar.com",
+            "https://sudoku.sanyogsar.com"
           )
           .allowedMethods("GET", "POST", "PATCH", "DELETE", "OPTIONS")
           .allowedHeaders("*")

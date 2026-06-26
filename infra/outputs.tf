@@ -57,3 +57,8 @@ output "alb_dns_name" {
   description = "DNS name of the ALB"
   value       = aws_lb.main.dns_name
 }
+
+output "acm_certificate_arn" {
+  description = "ARN of the API ACM certificate"
+  value       = aws_acm_certificate.api.arn
+}

@@ -16,7 +16,9 @@ public class CorsConfig {
         registry.addMapping("/api/**")
           .allowedOrigins(
             "http://localhost:5173",
-            "https://sudoku-app.sanjesh-ananda.workers.dev"
+            "https://sudoku-app.sanjesh-ananda.workers.dev",
+            "https://sanyogsar.com",
+            "https://www.sanyogsar.com"
           )
           .allowedMethods("GET", "POST", "PATCH", "DELETE", "OPTIONS")
           .allowedHeaders("*")

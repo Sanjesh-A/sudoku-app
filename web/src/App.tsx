@@ -12,7 +12,7 @@ import { UserMenu } from './components/UserMenu'
 import { gameReducer, initialState } from './state/gameReducer'
 import { useKeyboard } from './hooks/useKeyboard'
 import { useStorage } from './game/storage'
-import type { GameState } from './game/types'
+import type { GameState, Difficulty } from './game/types'
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth0()
@@ -63,7 +63,18 @@ function AuthenticatedApp() {
     }
   }
 
-  const handleNewGame = async (difficulty: 'EASY' | 'MEDIUM' | 'HARD') => {
+  const handleNewGame = async (difficulty: Difficulty) => {
+    const currentGame = state.game ?? savedGame
+    if (currentGame !== null && currentGame.difficulty !== difficulty) {
+      // Pattern A:
+      const confirmed = window.confirm(
+        `You have a ${currentGame.difficulty.toLowerCase()} game in progress. Abandon it and start a new ${difficulty.toLowerCase()} game?`
+      )
+      if (!confirmed) return
+      // OR for Pattern B:
+      // setPendingDifficulty(difficulty)
+      // return
+    }
     setError(null)
     try {
       const game = await storage.startGame(difficulty)

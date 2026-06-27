@@ -31,42 +31,36 @@ function App() {
 function AuthenticatedApp() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState)
   const [savedGame, setSavedGame] = useState<GameState | null>(null)
-  const [isLoadingMenu, setIsLoadingMenu] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const timerRef = useRef<TimerHandle | null>(null)
   const storage = useStorage()
+  const hasLoadedRef = useRef(false)
+
 
   // Show the loading state as soon as we transition into the menu, without
   // setting state synchronously inside the fetch effect.
   const [prevView, setPrevView] = useState(state.view)
   if (prevView !== state.view) {
     setPrevView(state.view)
-    if (state.view === 'menu') setIsLoadingMenu(true)
   }
-
-  // On menu entry, refresh saved game state from server
-  useEffect(() => {
-    if (state.view !== 'menu') return
-    storage
-      .loadCurrentGame()
-      .then(setSavedGame)
-      .catch((e) => setError(`Failed to load: ${e.message}`))
-      .finally(() => setIsLoadingMenu(false))
-  }, [state.view, storage])
 
   // Persist on changes when in game view
   useEffect(() => {
-    if (state.view !== 'game' || state.game === null) return
+    if (state.game === null) return
     storage.saveCurrentGame(state.game).catch((e) => {
       console.warn('Failed to save:', e)
     })
-  }, [state.game, state.view, storage])
+  }, [state.game, storage])
 
   useKeyboard(state.view === 'game' ? dispatch : noop)
 
   const goToMenu = () => {
-    const finalElapsedMs = timerRef.current?.getElapsedMs()
-    dispatch({ type: 'goToMenu', finalElapsedMs })
+    if (state.game !== null) {
+      const finalElapsedMs = timerRef.current?.getElapsedMs() ?? state.game.elapsedMs
+      dispatch({ type: 'goToMenu', finalElapsedMs })
+    } else {
+      dispatch({ type: 'goToMenu' })
+    }
   }
 
   const handleNewGame = async (difficulty: 'EASY' | 'MEDIUM' | 'HARD') => {
@@ -79,9 +73,20 @@ function AuthenticatedApp() {
     }
   }
 
+  // Load saved game from server once on app start
+  useEffect(() => {
+    if (hasLoadedRef.current) return
+    hasLoadedRef.current = true
+    storage.loadCurrentGame()
+      .then(setSavedGame)
+      .catch((e) => setError(`Failed to load: ${e.message}`))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleResume = () => {
-    if (savedGame !== null) {
-      dispatch({ type: 'resumeGame', game: savedGame })
+    const gameToResume = state.game ?? savedGame
+    if (gameToResume !== null) {
+      dispatch({ type: 'resumeGame', game: gameToResume })
     }
   }
 
@@ -114,16 +119,13 @@ function AuthenticatedApp() {
             <h1>Sudoku</h1>
             <UserMenu />
           </div>
-          {isLoadingMenu ? (
-            <p>Loading...</p>
-          ) : (
-            <Menu
-              savedGame={savedGame}
-              onResume={handleResume}
-              onNewGame={handleNewGame}
-              onHistory={() => dispatch({ type: 'goToHistory' })}
-            />
-          )}
+          
+          <Menu
+            savedGame={state.game ?? savedGame}
+            onResume={handleResume}
+            onNewGame={handleNewGame}
+            onHistory={() => dispatch({ type: 'goToHistory' })}
+          />          
         </>
       )}
 
